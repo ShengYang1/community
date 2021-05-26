@@ -643,7 +643,7 @@ As you may see in the example, plugin needs to populate the `optimizer_configs` 
 
 §  **Optimizer implementation**
 
-Graph Optimize function is the main part that plugin authors need to implement. The C API looks like below. The first param is an optimizer created by create_func. The second param is input graph. The third param is input TF_GrapplerItem which contains feed/fetch nodes info. The fourth param is output graph. Both input and output graphs are represented by serialized `TF_Buffer` objects:
+Graph Optimize function(`optimize_func`) is the main part that plugin authors need to implement. The C API looks like below. The first param is an optimizer created by create_func. The second param is input graph. The third param is input TF_GrapplerItem which contains feed/fetch nodes info. The fourth param is output graph. Both input and output graphs are represented by serialized `TF_Buffer` objects:
 
 ```cpp
 void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_GrapplerItem* item,
@@ -651,7 +651,7 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_Gr
 ```
 
 
-Here is an axample:
+Example:
 ```cpp
 void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_GrapplerItem* item,
                         TF_Buffer* optimized_graph_buf, TF_Status* tf_status) {
@@ -662,7 +662,7 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_Gr
 
   Status status;
   // Create GraphView object which provides helper functions to modify graph.
-  utils::GraphView graph_view(graph_def, status);
+  GraphView graph_view(graph_def, status);
   const int num_nodes = graph_def.node_size();
   for (int i = num_nodes - 1; i >= 0; --i) {
     // Fetch a node.
@@ -675,7 +675,7 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_Gr
     new_node.set_op(node_def.name());
 
     // Add new nodes into graph.
-    utils::Mutation* mutation = graph_view.GetMutationBuilder();
+    Mutation* mutation = graph_view.GetMutationBuilder();
     mutation->AddNode(std::move(new_node), &status);
     mutation->Apply();
   }
@@ -702,7 +702,41 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_Gr
 
 * `BufferToMessage`, `MessageToBuffer`: They are serialization/deserialization functions between `TF_Buffer` and protobuf objects(e.g., `GraphDef`). Plugin can deserialize input graph to plugin GraphDef onject, and serialize the output GraphDef object when graph transformation is finished.
 
-* `GraphView`, `Mutation`: These are helper classes provided by TensorFlow proper in `tensorflow/core/grappler/utils` folder to modify `GraphDef` objects. They are only dependent on `GraphDef` objects, so plugin authors can easily copy this part into plugin side.
+  Example:
+  ```cpp
+  Status MessageToBuffer(const protobuf::MessageLite& in, TF_Buffer* out) {
+    if (out->data != nullptr) {
+      return errors::InvalidArgument("Passing non-empty TF_Buffer is invalid.");
+    }
+    const size_t proto_size = in.ByteSizeLong();
+    void* buf = malloc(proto_size);
+    if (buf == nullptr) {
+      return errors::ResourceExhausted(
+          "Failed to allocate memory to serialize message of type '",
+          in.GetTypeName(), "' and size ", proto_size);
+    }
+    if (!in.SerializeWithCachedSizesToArray(static_cast<uint8*>(buf))) {
+      free(buf);
+      return errors::InvalidArgument(
+          "Unable to serialize ", in.GetTypeName(),
+          " protocol buffer, perhaps the serialized size (", proto_size,
+          " bytes) is too large?");
+    }
+    out->data = buf;
+    out->length = proto_size;
+    out->data_deallocator = [](void* data, size_t length) { free(data); };
+    return Status::OK();
+  }
+
+  Status BufferToMessage(const TF_Buffer* in, protobuf::MessageLite& out) {
+    if (in == nullptr || !out.ParseFromArray(in->data, in->length)) {
+      return errors::InvalidArgument("Unparsable proto");
+    }
+    return Status::OK();
+  }
+  ```
+
+* `GraphView`, `Mutation`: These are helper classes provided by TensorFlow proper in [tensorflow/core/grappler/utils](https://github.com/tensorflow/tensorflow/tree/r2.5/tensorflow/core/grappler/utils) folder to modify `GraphDef` objects. Plugin authors can manually copy this part into plugin side, or they can write their own util functions.
 
 §  **Optimizer util functions**
 
