@@ -3,13 +3,13 @@
 
 void TF_InitGraphPlugin(TP_OptimizerRegistrationParams* params,
                         TF_Status* status) {
-  params->struct_size = TP_OPTIMIZER_REGISTRARION_PARAMS_STRUCT_SIZE;
-  params->configs->struct_size = TP_OPTIMIZER_CONFIGS_STRUCT_SIZE;
+  params->struct_size = TP_OPTIMIZER_REGISTRATION_PARAMS_STRUCT_SIZE;
+  params->optimizer_configs->struct_size = TP_OPTIMIZER_CONFIGS_STRUCT_SIZE;
   params->optimizer->struct_size = TP_OPTIMIZER_STRUCT_SIZE;
 
   // Define some configs to turn off existing optimizers.
-  params->configs->remapping = TF_TriState_Off;
-  params->configs->layout_optimizer = TF_TriState_Off;
+  params->optimizer_configs->remapping = TF_TriState_Off;
+  params->optimizer_configs->layout_optimizer = TF_TriState_Off;
 
   // Set functions to create a new optimizer.
   params->device_type = "MY_DEVICE";
