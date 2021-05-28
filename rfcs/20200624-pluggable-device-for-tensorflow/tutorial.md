@@ -740,9 +740,9 @@ void Optimizer_Optimize(void* optimizer, const TF_Buffer* graph_buf, const TF_Gr
 
 §  **Optimizer util functions**
 
-Modular TensorFlow provides some util C APIs to help retrieve necessary graph information, mainly three parts: `TF_GrapplerItem`, `TF_GraphProperties` and `TF_FunctionLibraryDefinition`.
-- `TF_GrapplerItem` represents a combination of a graph, and some more information about feed/fetch nodes, preserved nodes:
-  - `TF_GetNodesToPreserveListSize()`,`TF_GetNodesToPreserveList()`: Get a set of node names that must be preserved. They can not be transformed or removed during the graph transformation. This includes feed and fetch nodes, keep_ops, init_ops.
+Modular TensorFlow provides three opaque handles, i.e.,  `TF_GrapplerItem`, `TF_GraphProperties` and `TF_FunctionLibraryDefinition`, and related C APIs for retrieving necessary graph information:
+  - `TF_GrapplerItem` represents a combination of a graph, and some more information about feed/fetch nodes, preserved nodes.
+  - `TF_GetNodesToPreserveListSize()`,`TF_GetNodesToPreserveList()`: Get a set of preserved node names which can not be transformed or removed during the graph transformation. This includes feed and fetch nodes, keep_ops, init_ops.
   - `TF_GetFetchNodesListSize()`,`TF_GetFetchNodesList()`: Get a set of node names for fetch nodes.
 
   An example of how to get a set of preserved nodes:
